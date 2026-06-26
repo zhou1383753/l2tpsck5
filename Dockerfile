@@ -18,9 +18,8 @@ COPY . .
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /app-bin .
 
-
 # ==========================================
-# 阶段二：极简运行阶段 (Alpine 镜像，仅十几MB)
+# 阶段二：极简运行阶段 (Alpine 镜像)
 # ==========================================
 FROM alpine:latest
 
@@ -28,14 +27,14 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-# 从构建阶段把编译好的二进制文件复制过来
+# 1. 复制编译出来的二进制程序
 COPY --from=builder /app-bin /app/app-bin
 
-# 如果你有 index.html 网页文件要读取，也可以放开下面这行注释：
-# COPY index.html /app/index.html
+# 2. 【新增这一行】把项目根目录下的 index.html 复制到容器内的 /app 目录下
+COPY index.html /app/index.html
 
-# 暴露端口 (根据你 Go 后端监听的端口修改，通常是 8000)
-EXPOSE 8000
+# 暴露端口 (对应你的 Go 监听端口 8080)
+EXPOSE 8080
 
 # 启动程序
 CMD ["/app/app-bin"]
