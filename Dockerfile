@@ -17,7 +17,6 @@ COPY . .
 # 3. 读取多架构参数，自动进行交叉编译
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /app-bin .
-
 # ==========================================
 # 阶段二：极简运行阶段 (Alpine 镜像)
 # ==========================================
@@ -27,11 +26,15 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-# 1. 复制编译出来的二进制程序
+# 1. 从构建阶段把编译好的 Go 二进制程序复制过来
 COPY --from=builder /app-bin /app/app-bin
 
-# 2. 【新增这一行】把项目根目录下的 index.html 复制到容器内的 /app 目录下
+# 2. 【核心修改】把所有的前端网页静态资源全部打包进容器！
 COPY index.html /app/index.html
+COPY proxy-parser.js /app/proxy-parser.js
+COPY pages/ /app/pages/
+COPY assets/ /app/assets/
+COPY rules/ /app/rules/
 
 # 暴露端口 (对应你的 Go 监听端口 8080)
 EXPOSE 8080
