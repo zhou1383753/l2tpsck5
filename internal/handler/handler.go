@@ -64,7 +64,7 @@ func (a *API) License(w http.ResponseWriter, r *http.Request) {
 func (a *API) Version(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":     "success",
-		"version":    "rewrite-dev",
+		"version":    "v1.0.3",
 		"build_time": time.Now().Format(time.RFC3339),
 		"go_version": runtime.Version(),
 		"os_arch":    runtime.GOOS + "/" + runtime.GOARCH,
