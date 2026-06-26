@@ -1,5 +1,0 @@
-cd "C:\Users\cheng\Desktop\新建文件夹 (10)\app\server"
-
-go mod tidy
-
-$env:GOOS="linux"; $env:GOARCH="amd64"; $env:GOARM=""; go build -o ..\app-linux-amd64 .
