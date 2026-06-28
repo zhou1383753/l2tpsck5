@@ -57,18 +57,24 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: 下载所有架构的 tar
+      - name: 下载 AMD64 tar
         uses: actions/download-artifact@v4
         with:
+          name: image-amd64.tar
+          path: artifacts
+          
+      - name: 下载 ARM64 tar
+        uses: actions/download-artifact@v4
+        with:
+          name: image-arm64.tar
           path: artifacts
 
       - name: 发布到 GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # 将下载的两个文件上传
           files: |
-            artifacts/image-amd64.tar/image-amd64.tar
-            artifacts/image-arm64.tar/image-arm64.tar
+            artifacts/image-amd64.tar
+            artifacts/image-arm64.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
