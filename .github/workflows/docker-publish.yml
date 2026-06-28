@@ -29,8 +29,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          # 注意：这里改用 outputs 直接导出 tar，不再使用 load
-          outputs: type=docker,dest=my-image.tar
+          # 明确指定为 OCI 格式，直接输出到文件
+          outputs: type=oci,dest=my-image.tar
           platforms: linux/amd64,linux/arm64
           tags: local-image:latest
           cache-from: type=gha
