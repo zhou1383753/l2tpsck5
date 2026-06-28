@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types: [published] # 当 Release 被发布时触发
 
 permissions:
   contents: write  # 必须具备写入权限以创建 Release
