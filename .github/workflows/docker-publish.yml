@@ -11,38 +11,64 @@ permissions:
   contents: write  # 必须具备写入权限以创建 Release
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 定义架构矩阵
+        platform: [linux/amd64, linux/arm64]
+        include:
+          # 根据架构设置不同的文件名
+          - platform: linux/amd64
+            output_name: image-amd64.tar
+          - platform: linux/arm64
+            output_name: image-arm64.tar
     steps:
-      - name: 步骤一：拉取代码
+      - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 步骤二：安装 QEMU 模拟器
+      - name: 设置 QEMU 和 Buildx
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.platform }}
+      - uses: docker/setup-buildx-action@v3
 
-      - name: 步骤三：安装 Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 步骤四：构建并导出 tar
+      - name: 构建并导出特定架构 tar
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
           push: false
-          # 明确指定为 OCI 格式，直接输出到文件
-          outputs: type=oci,dest=my-image.tar
-          platforms: linux/amd64,linux/arm64
+          # 为当前矩阵任务导出指定的 tar 文件
+          outputs: type=oci,dest=${{ matrix.output_name }}
+          platforms: ${{ matrix.platform }}
           tags: local-image:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 注意：移除原来的“步骤五：导出镜像为 tar 文件”（docker save），
-      # 因为上一步的 outputs 已经直接生成了 my-image.tar。
+      - name: 上传 Artifact (用于在 Release 步骤使用)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ matrix.output_name }}
 
-      - name: 步骤六：发布到 GitHub Releases
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 下载所有架构的 tar
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 发布到 GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: my-image.tar
+          # 将下载的两个文件上传
+          files: |
+            artifacts/image-amd64.tar/image-amd64.tar
+            artifacts/image-arm64.tar/image-arm64.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
