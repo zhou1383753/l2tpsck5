@@ -1,66 +1,45 @@
-name: 自动构建多平台 Docker 镜像
+name: 自动构建镜像并发布到 Release
 
-# 触发条件：
-# 1. 当你向 main 或 master 分支推送（push）代码时
-# 2. 当你发布带有版本号的 tag（如 v1.0.0）时
 on:
   push:
-    branches:
-      - main
-      - master
     tags:
       - 'v*'
 
-# 赋予该工作流写入 GitHub Packages 的权限
 permissions:
-  contents: read
-  packages: write
+  contents: write  # 必须具备写入权限以创建 Release
 
 jobs:
-  build-and-push:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
-      # 1. 拉取仓库代码
       - name: 步骤一：拉取代码
         uses: actions/checkout@v4
 
-      # 2. 安装 QEMU (这是支持 arm64 交叉编译的核心)
       - name: 步骤二：安装 QEMU 模拟器
         uses: docker/setup-qemu-action@v3
 
-      # 3. 安装 Docker Buildx (支持多平台构建)
       - name: 步骤三：安装 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4. 登录到 GitHub Container Registry (ghcr.io)
-      - name: 步骤四：登录到 GHCR 仓库
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # 5. 自动解析提取镜像标签 (例如：如果是 main 分支就打上 latest 标签，如果是 tag 就打上 v1.x 标签)
-      - name: 步骤五：提取镜像元数据
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            type=ref,event=tag
-
-      # 6. 一键构建并推送到 GitHub Container Registry
-      - name: 步骤六：一键构建并推送多架构镜像
+      - name: 步骤四：构建镜像并保存为 tar
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          # 核心：同时构建 amd64 (普通电脑/服务器) 和 arm64 (苹果芯片/手机等) 架构镜像
+          push: false  # 不推送到任何远程仓库
+          load: true   # 加载到本地 docker 守护进程以便执行 save
+          tags: local-image:latest
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # 开启缓存，让下一次构建速度快上 5 倍
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: 步骤五：导出镜像为 tar 文件
+        run: docker save local-image:latest -o my-image.tar
+
+      - name: 步骤六：发布到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: my-image.tar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
