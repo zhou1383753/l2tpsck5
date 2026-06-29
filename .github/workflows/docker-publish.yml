@@ -38,8 +38,8 @@ jobs:
         with:
           context: .
           push: false
-          # 为当前矩阵任务导出指定的 tar 文件
-          outputs: type=oci,dest=${{ matrix.output_name }}
+          # 修改这里：将 type=oci 改为 type=docker
+          outputs: type=docker,dest=${{ matrix.output_name }}
           platforms: ${{ matrix.platform }}
           tags: local-image:latest
           cache-from: type=gha
